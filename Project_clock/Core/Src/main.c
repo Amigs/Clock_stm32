@@ -321,28 +321,21 @@ void setLeds(PORTS *PORTS){
 	PORTS->pos[11]= LED12_Pin;
 }
 void runMode(PORTS *ports){
-	uint32_t time = 0;
-	service = 0;
+	/*service = 0;
 	do{
 		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
 	}while(service < 20);
-	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
-	if((HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin))==1)
-		time++;
-	while(time==1){
-		service = 0;
-		do{
-			HAL_GPIO_WritePin(ports->ports[counterH-1], ports->pos[counterH-1], GPIO_PIN_SET);
-			HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_SET);
-			timeSet(2);
-			HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_RESET);
-			timeSet(2);
-		}while(service < 16);
-		HAL_GPIO_WritePin(ports->ports[counterH-1], ports->pos[counterH-1], GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);*/
+	service = 0;
+	do{
+		HAL_GPIO_WritePin(ports->ports[counterH-1], ports->pos[counterH-1], GPIO_PIN_SET);
+		HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_SET);
+		timeSet(2);
 		HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_RESET);
-		if(service>1)
-			time++;
-	}
+		timeSet(2);
+	}while(service < 16);
+	HAL_GPIO_WritePin(ports->ports[counterH-1], ports->pos[counterH-1], GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_RESET);
 }
 void timeSet(int number){
 	for(buffer=0;buffer<=number;){
@@ -355,28 +348,31 @@ int pulseTime(){
 		time=globalTime;
 		while((HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin))==1)
 			timeSet(10);
-		if((globalTime-time) >= 10)
+		if((globalTime-time) <= 2 )
+			return 0;
+		else if((globalTime-time) >= 10)
 			return 1;
-		else if (((globalTime-time)>5) && ((globalTime-time)<10))
+		else if (((globalTime-time)>=5) && ((globalTime-time)<=6))
 			return 2;
-		return 0;
+		return 3;
 	}
-	return 0;
-
+	return 3;
 }
 void setMode(PORTS *ports){
-	for(i=0;i>12;i++){
+	for(i=0;i<12;i++){
 		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_SET);
 	}
-	for(i=0;i>12;i++){
+	HAL_Delay(3000);
+	for(i=0;i<12;i++){
 		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_RESET);
 	}
 }
 void alarmMode(PORTS *ports){
-	for(i=13;i<1;i--){
-		 HAL_GPIO_WritePin(ports->ports[i-1], ports->pos[i-1], GPIO_PIN_SET);
+	for(i=0;i<6;i++){
+		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_SET);
 	}
-	for(i=0;i>12;i++){
+	HAL_Delay(3000);
+	for(i=0;i<6;i++){
 		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_RESET);
 	}
 }

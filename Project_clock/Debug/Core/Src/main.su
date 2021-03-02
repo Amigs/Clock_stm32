@@ -4,10 +4,10 @@ main.c:164:6:SystemClock_Config	72	static
 main.c:203:13:MX_TIM2_Init	32	static
 main.c:248:13:MX_GPIO_Init	40	static
 main.c:297:6:setLeds	16	static
-main.c:323:6:runMode	24	static
-main.c:347:6:timeSet	16	static
-main.c:351:5:pulseTime	16	static
-main.c:367:6:setMode	16	static
-main.c:375:6:alarmMode	16	static
-main.c:383:6:alarm	16	static
-main.c:400:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:323:6:runMode	16	static
+main.c:340:6:timeSet	16	static
+main.c:344:5:pulseTime	16	static
+main.c:361:6:setMode	16	static
+main.c:370:6:alarmMode	16	static
+main.c:379:6:alarm	16	static
+main.c:396:6:Error_Handler	4	static,ignoring_inline_asm
