@@ -28,9 +28,9 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 typedef struct {
-	GPIO_TypeDef * ports[12];
-	uint16_t pos[12];
-}PORTS;
+	uint16_t pin[12];
+	GPIO_TypeDef * PIO[12];
+}GP;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -46,15 +46,15 @@ typedef struct {
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-volatile uint8_t buffer = 0;
+volatile uint8_t buffer = 0, L = 0;
 volatile uint8_t milis = 0;
 volatile uint8_t counterM = 1;
 volatile uint16_t counterS = 0;
 volatile uint16_t counterH = 12;
 volatile uint16_t service = 0;
-volatile uint32_t globalTime = 0;
-uint8_t ha = 12,ma = 2;
-int i,j;
+volatile uint32_t reference = 0;
+uint8_t ha = 12, ma = 3;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,13 +62,14 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-int pulseTime();
-void setLeds(PORTS *PORTS);
-void timeSet(int number);
-void runMode(PORTS *ports);
-void setMode(PORTS *ports);
-void alarmMode(PORTS *ports);
-void alarm(PORTS *ports);
+uint16_t pulse();
+void setLeds(GP *GP);
+void timeSet(uint16_t number);
+void runMode(GP *PIO);
+void setMode(GP *PIO);
+void alarmMode(GP *PIO);
+void alarm(GP *PIO);
+void change(GP *PIO, uint8_t flag);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -80,11 +81,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		service++;
 		if(milis == 10){
 			counterS++;
-			globalTime++;
+			reference++;
 			milis = 0;
 		}
 		if(counterS == 300){
 			counterM++;
+			L=0;
 			counterS = 0;
 		}
 		if(counterM == 13){
@@ -104,7 +106,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	PORTS ports;
+	GP PIO;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -128,28 +130,28 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
-  setLeds(&ports);
+  setLeds(&PIO);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  switch((int)pulseTime()){
+	  switch((uint16_t)pulse()){
 	  case 0:
-		  runMode(&ports);
+		  runMode(&PIO);
 		  break;
 	  case 1:
-		  setMode(&ports);
+		  setMode(&PIO);
 	  	  break;
 	  case 2:
-		  alarmMode(&ports);
+		  alarmMode(&PIO);
 	 	  break;
  	  default:
  		  break;
 	  	  }
-	  if((ha == counterH) && (ma == counterM))
-		  alarm(&ports);
+	  if((ha == counterH) && (ma == counterM) && (L == 0))
+		  alarm(&PIO);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -294,99 +296,191 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void setLeds(PORTS *PORTS){
-	PORTS->ports[0] = LED1_GPIO_Port;
-	PORTS->ports[1] = LED2_GPIO_Port;
-	PORTS->ports[2] = LED3_GPIO_Port;
-	PORTS->ports[3] = LED4_GPIO_Port;
-	PORTS->ports[4] = LED5_GPIO_Port;
-	PORTS->ports[5] = LED6_GPIO_Port;
-	PORTS->ports[6] = LED7_GPIO_Port;
-	PORTS->ports[7] = LED8_GPIO_Port;
-	PORTS->ports[8] = LED9_GPIO_Port;
-	PORTS->ports[9] = LED10_GPIO_Port;
-	PORTS->ports[10]= LED11_GPIO_Port;
-	PORTS->ports[11]= LED12_GPIO_Port;
-	PORTS->pos[0] = LED1_Pin;
-	PORTS->pos[1] = LED2_Pin;
-	PORTS->pos[2] = LED3_Pin;
-	PORTS->pos[3] = LED4_Pin;
-	PORTS->pos[4] = LED5_Pin;
-	PORTS->pos[5] = LED6_Pin;
-	PORTS->pos[6] = LED7_Pin;
-	PORTS->pos[7] = LED8_Pin;
-	PORTS->pos[8] = LED9_Pin;
-	PORTS->pos[9] = LED10_Pin;
-	PORTS->pos[10]= LED11_Pin;
-	PORTS->pos[11]= LED12_Pin;
+void setLeds(GP *GP){
+	GP->PIO[0] = LED1_GPIO_Port;
+	GP->PIO[1] = LED2_GPIO_Port;
+	GP->PIO[2] = LED3_GPIO_Port;
+	GP->PIO[3] = LED4_GPIO_Port;
+	GP->PIO[4] = LED5_GPIO_Port;
+	GP->PIO[5] = LED6_GPIO_Port;
+	GP->PIO[6] = LED7_GPIO_Port;
+	GP->PIO[7] = LED8_GPIO_Port;
+	GP->PIO[8] = LED9_GPIO_Port;
+	GP->PIO[9] = LED10_GPIO_Port;
+	GP->PIO[10]= LED11_GPIO_Port;
+	GP->PIO[11]= LED12_GPIO_Port;
+	GP->pin[0] = LED1_Pin;
+	GP->pin[1] = LED2_Pin;
+	GP->pin[2] = LED3_Pin;
+	GP->pin[3] = LED4_Pin;
+	GP->pin[4] = LED5_Pin;
+	GP->pin[5] = LED6_Pin;
+	GP->pin[6] = LED7_Pin;
+	GP->pin[7] = LED8_Pin;
+	GP->pin[8] = LED9_Pin;
+	GP->pin[9] = LED10_Pin;
+	GP->pin[10]= LED11_Pin;
+	GP->pin[11]= LED12_Pin;
 }
-void runMode(PORTS *ports){
-	/*service = 0;
-	do{
-		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
-	}while(service < 20);
-	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);*/
+void runMode(GP *PIO){
 	service = 0;
 	do{
-		HAL_GPIO_WritePin(ports->ports[counterH-1], ports->pos[counterH-1], GPIO_PIN_SET);
-		HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_SET);
+		HAL_GPIO_WritePin(PIO->PIO[counterH-1], PIO->pin[counterH-1], GPIO_PIN_SET);
+		HAL_GPIO_WritePin(PIO->PIO[counterM-1], PIO->pin[counterM-1], GPIO_PIN_SET);
 		timeSet(2);
-		HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(PIO->PIO[counterM-1], PIO->pin[counterM-1], GPIO_PIN_RESET);
 		timeSet(2);
 	}while(service < 16);
-	HAL_GPIO_WritePin(ports->ports[counterH-1], ports->pos[counterH-1], GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(ports->ports[counterM-1], ports->pos[counterM-1], GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(PIO->PIO[counterH-1], PIO->pin[counterH-1], GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(PIO->PIO[counterM-1], PIO->pin[counterM-1], GPIO_PIN_RESET);
 }
-void timeSet(int number){
+void timeSet(uint16_t number){
 	for(buffer=0;buffer<=number;){
 	}
 }
-int pulseTime(){
+uint16_t pulse(){
 	uint32_t time = 0;
-	globalTime = 0;
+	reference = 0;
 	if(HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin) == 1){
-		time=globalTime;
+		time=reference;
 		while((HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin))==1)
 			timeSet(10);
-		if((globalTime-time) <= 2 )
+		if((reference-time) <= 2 )
 			return 0;
-		else if((globalTime-time) >= 10)
+		else if((reference-time) >= 10)
 			return 1;
-		else if (((globalTime-time)>=5) && ((globalTime-time)<=6))
+		else if (((reference-time)>=6) && ((reference-time)<=7))
 			return 2;
 		return 3;
 	}
 	return 3;
 }
-void setMode(PORTS *ports){
-	for(i=0;i<12;i++){
-		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_SET);
-	}
-	HAL_Delay(3000);
-	for(i=0;i<12;i++){
-		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_RESET);
-	}
-}
-void alarmMode(PORTS *ports){
-	for(i=0;i<6;i++){
-		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_SET);
-	}
-	HAL_Delay(3000);
-	for(i=0;i<6;i++){
-		 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_RESET);
-	}
-}
-void alarm(PORTS *ports){
-	while(!HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin)){
+void setMode(GP *PIO){
+	service = 0;
+	do{
 		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
-		for(i=0;i<12;i++)
-			 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_SET);
-		for(i=0;i<12;i++)
-			HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_RESET);
-	}
-
-	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		timeSet(3);
+		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		timeSet(3);
+	}while(service < 15);
+	change(PIO,1);
 }
+void change(GP *PIO, uint8_t flag){
+	uint8_t select = 0, j = 0;
+	if(flag == 1){
+		while(!j){
+			HAL_GPIO_WritePin(PIO->PIO[counterH-1], PIO->pin[counterH-1], GPIO_PIN_SET);
+			select = pulse();
+			if(select == 0){
+				HAL_GPIO_WritePin(PIO->PIO[counterH-1], PIO->pin[counterH-1], GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(PIO->PIO[counterH], PIO->pin[counterH], GPIO_PIN_SET);
+				counterH++;
+			}else if (select == 2){
+				j++;
+				HAL_GPIO_WritePin(PIO->PIO[counterH-1], PIO->pin[counterH-1], GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(PIO->PIO[counterH-1], PIO->pin[counterH-1], GPIO_PIN_RESET);
+		}
+		j=0;
+		service = 0;
+		do{
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+			timeSet(3);
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+			timeSet(3);
+		}while(service < 20);
+		while(!j){
+			HAL_GPIO_WritePin(PIO->PIO[counterM-1], PIO->pin[counterM-1], GPIO_PIN_SET);
+			select = pulse();
+			if(select == 0){
+				HAL_GPIO_WritePin(PIO->PIO[counterM-1], PIO->pin[counterM-1], GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(PIO->PIO[counterM], PIO->pin[counterM], GPIO_PIN_SET);
+				counterM++;
+			}else if(select == 2){
+				j++;
+				service = 0;
+				HAL_GPIO_WritePin(PIO->PIO[counterM-1], PIO->pin[counterM-1], GPIO_PIN_RESET);
+				do{
+					HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+				}while(service < 20);
+				HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(PIO->PIO[counterM-1], PIO->pin[counterM-1], GPIO_PIN_RESET);
+		}
+	}else{
+		j=0;
+		while(!j){
+			if(ha == 13)
+				ha = 1;
+			HAL_GPIO_WritePin(PIO->PIO[ha-1], PIO->pin[ha-1], GPIO_PIN_SET);
+			select = pulse();
+			if(select == 0){
+				HAL_GPIO_WritePin(PIO->PIO[ha-1], PIO->pin[ha-1], GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(PIO->PIO[ha], PIO->pin[ha], GPIO_PIN_SET);
+				ha++;
+			}else if (select == 2){
+				j++;
+				HAL_GPIO_WritePin(PIO->PIO[ha-1], PIO->pin[ha-1], GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(PIO->PIO[ha-1], PIO->pin[ha-1], GPIO_PIN_RESET);
+		}
+		j=0;
+		service = 0;
+		do{
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+			timeSet(3);
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+			timeSet(3);
+		}while(service < 20);
+		while(!j){
+			if(ma == 13)
+				ma = 1;
+			HAL_GPIO_WritePin(PIO->PIO[ma-1], PIO->pin[ma-1], GPIO_PIN_SET);
+			select = pulse();
+			if(select == 0){
+				HAL_GPIO_WritePin(PIO->PIO[ma-1], PIO->pin[ma-1], GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(PIO->PIO[ma], PIO->pin[ma], GPIO_PIN_SET);
+				ma++;
+			}else if(select == 2){
+				j++;
+				service = 0;
+				HAL_GPIO_WritePin(PIO->PIO[ma-1], PIO->pin[ma-1], GPIO_PIN_RESET);
+				do{
+					HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+				}while(service < 20);
+				HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+			}
+			HAL_GPIO_WritePin(PIO->PIO[ma-1], PIO->pin[ma-1], GPIO_PIN_RESET);
+		}
+	}
+}
+void alarmMode(GP *PIO){
+	service = 0;
+	do{
+		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+		timeSet(3);
+		HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+		timeSet(3);
+	}while(service < 20);
+	change(PIO, 2);
+}
+void alarm(GP *PIO){
+	while(!HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin)){
+		service = 0;
+		//do{
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_SET);
+			timeSet(1);
+			HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+			timeSet(1);
+		//}while(service < 20);
+	}
+	HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+	L++;
+}
+/*		for(i=0;i<12;i++)
+	 HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_SET);
+for(i=0;i<12;i++)
+	HAL_GPIO_WritePin(ports->ports[i], ports->pos[i], GPIO_PIN_RESET);*/
 /* USER CODE END 4 */
 
 /**
