@@ -14,6 +14,7 @@
   * License. You may obtain a copy of the License at:
   *                        opensource.org/licenses/BSD-3-Clause
   *
+  * Created by Miguel A. Murillo
   ******************************************************************************
   */
 /* USER CODE END Header */
